@@ -3,8 +3,34 @@ import { StudentRecord } from "../types";
 
 export const generateSampleData = async (): Promise<StudentRecord[]> => {
   try {
-    // The API key must be obtained exclusively from the environment variable process.env.API_KEY.
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Robust API Key retrieval for Vite/Vercel environments
+    let apiKey = '';
+    
+    // 1. Try Vite standard (import.meta.env)
+    try {
+      // @ts-ignore
+      if (import.meta && import.meta.env && import.meta.env.VITE_API_KEY) {
+        // @ts-ignore
+        apiKey = import.meta.env.VITE_API_KEY;
+      }
+    } catch (e) {
+      // Ignore error if import.meta is not available
+    }
+
+    // 2. Fallback to process.env (Node.js/Test)
+    if (!apiKey) {
+      try {
+        apiKey = process.env.API_KEY || '';
+      } catch (e) {
+        // Ignore ReferenceError if process is not defined in browser
+      }
+    }
+
+    if (!apiKey) {
+      throw new Error("API Key not configured. Please set VITE_API_KEY in Vercel.");
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
     
     // Prompt engineered to return a raw CSV string
     const prompt = `

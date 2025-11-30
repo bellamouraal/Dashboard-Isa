@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, FileDown, FileImage, Loader2, Presentation } from 'lucide-react';
+import { Download, FileDown, FileImage, Loader2, Presentation, FileCode } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -43,7 +43,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
       XLSX.utils.book_append_sheet(wb, wsStates, "Demográfico");
 
       XLSX.writeFile(wb, "talent_lab_export_canva.xlsx");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Excel export failed", error);
       alert("Falha ao exportar Excel.");
     } finally {
@@ -97,7 +97,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
 
       pdf.save("talent_lab_dashboard.pdf");
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("PDF export failed", error);
       alert("Falha ao exportar PDF. Tente novamente.");
     } finally {
@@ -247,7 +247,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
 
       pptx.writeFile({ fileName: 'TalentLab_Dashboard_Animated.pptx' });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("PPT Export failed", error);
       alert("Falha ao gerar PowerPoint. Tente novamente.");
     } finally {
@@ -256,6 +256,275 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
       setProgress('');
     }
   };
+
+  const handleExportHTML = async () => {
+    setIsExporting(true);
+    setProgress('Compilando Relatório HTML...');
+
+    try {
+        // 1. Process Data upfront to avoid logic duplication in the HTML file
+        const hiresData = Processor.processHiresPerCompany(data);
+        const impactData = Processor.processTalentLabImpact(data);
+        const comparisonData = Processor.processSectorComparison(data);
+        const internshipData = Processor.processInternshipsByCompany(data);
+        
+        // Prepare roles data per company
+        const companies = Array.from(new Set(data.map(d => d.company)));
+        const rolesData: any[] = [];
+        companies.forEach(comp => {
+            rolesData.push({
+                company: comp,
+                data: Processor.processRolesByCompany(data, comp)
+            });
+        });
+
+        // 2. Capture Map as Image (Map uses D3 and external Fetch, hard to embed in standalone HTML)
+        let mapImage = "";
+        const mapElement = document.getElementById('chart-map');
+        if (mapElement) {
+             const canvas = await html2canvas(mapElement, {
+                scale: 1.5,
+                backgroundColor: '#121212',
+                useCORS: true,
+                logging: false
+             });
+             mapImage = canvas.toDataURL('image/png');
+        }
+
+        // 3. Construct the HTML String
+        // This is a minimal React app injected into a single string
+        const htmlContent: string = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talent Lab - Relatório Interativo</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: { primary: '#E11457', dark: '#0a0a0a', card: '#121212' },
+            fontFamily: { sans: ['Inter', 'sans-serif'] },
+          },
+        },
+      };
+    </script>
+
+    <!-- React & Recharts Dependencies -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { background-color: #000; color: white; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Inject Data -->
+    <script>
+        window.REPORT_DATA = {
+            hires: ${JSON.stringify(hiresData)},
+            impact: ${JSON.stringify(impactData)},
+            internships: ${JSON.stringify(internshipData)},
+            comparison: ${JSON.stringify(comparisonData)},
+            roles: ${JSON.stringify(rolesData)},
+            mapImage: "${mapImage}"
+        };
+    </script>
+
+    <!-- React Application -->
+    <script type="text/babel">
+        const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList, PieChart, Pie, Sector } = Recharts;
+        const { useState } = React;
+        const COLORS = ['#E11457', '#b31045', '#ff4d88', '#555555', '#333333'];
+
+        // --- COMPONENTS ---
+
+        const CustomTooltip = ({ active, payload, label }) => {
+            if (active && payload && payload.length) {
+                return (
+                    <div className="bg-zinc-900 border border-zinc-800 p-2 rounded text-white text-xs">
+                        <p className="font-bold">{label || payload[0].name}</p>
+                        <p style={{ color: payload[0].fill }}>{payload[0].value} Alunos</p>
+                    </div>
+                );
+            }
+            return null;
+        };
+
+        const SimpleBarChart = ({ data, title, color }) => {
+             const [activeIndex, setActiveIndex] = useState(null);
+             return (
+                <div className="bg-card rounded-2xl p-6 border border-gray-800 shadow-xl h-[300px]">
+                    <h3 className="text-white mb-4 font-semibold text-sm border-l-4 pl-2" style={{borderColor: color}}>{title}</h3>
+                    <ResponsiveContainer width="100%" height="90%">
+                        <BarChart data={data} layout="vertical" margin={{ left: 0, right: 30 }} onMouseLeave={() => setActiveIndex(null)}>
+                            <XAxis type="number" hide />
+                            <YAxis dataKey="name" type="category" width={90} tick={{ fill: '#aaa', fontSize: 11 }} axisLine={false} tickLine={false} />
+                            <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}} />
+                            <Bar dataKey="value" barSize={24} radius={[0, 4, 4, 0]}>
+                                {data.map((entry, index) => (
+                                    <Cell key={index} cursor="pointer" fill={activeIndex === index ? '#fff' : color} fillOpacity={activeIndex === index ? 1 : 0.8} onMouseEnter={() => setActiveIndex(index)} />
+                                ))}
+                                <LabelList dataKey="value" position="right" style={{ fill: '#fff', fontSize: '12px', fontWeight: 'bold' }} />
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+             )
+        }
+
+        const renderActiveShape = (props) => {
+          const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
+          return (
+            <g>
+              <text x={cx} y={cy} dy={-10} textAnchor="middle" fill="#fff" className="text-xs font-bold">{payload.name || payload.role}</text>
+              <text x={cx} y={cy} dy={15} textAnchor="middle" fill="#E11457" className="text-sm font-bold">{value} Le.</text>
+              <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 6} startAngle={startAngle} endAngle={endAngle} fill={fill} />
+              <Sector cx={cx} cy={cy} startAngle={startAngle} endAngle={endAngle} innerRadius={outerRadius + 8} outerRadius={outerRadius + 10} fill={fill} opacity={0.3} />
+            </g>
+          );
+        };
+
+        const InteractivePie = ({ data, title }) => {
+            const [activeIndex, setActiveIndex] = useState(0);
+            return (
+                <div className="bg-card rounded-2xl p-6 border border-gray-800 shadow-xl h-[300px]">
+                     <h3 className="text-white mb-4 font-semibold text-sm border-l-4 border-primary pl-2">{title}</h3>
+                     <ResponsiveContainer width="100%" height="90%">
+                        <PieChart>
+                            <Pie activeIndex={activeIndex} activeShape={renderActiveShape} data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value" onMouseEnter={(_, index) => setActiveIndex(index)}>
+                                {data.map((entry, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} stroke="none" />)}
+                            </Pie>
+                        </PieChart>
+                     </ResponsiveContainer>
+                </div>
+            )
+        }
+
+        const ComparisonChart = ({ data }) => {
+             const maxVal = Math.max(...data.map(d => d.topCount), ...data.map(d => d.lowCount), 1);
+             return (
+                <div className="bg-card rounded-2xl border border-gray-800 p-6">
+                    <h3 className="text-white font-bold text-xl mb-6">Disparidade de Atuação</h3>
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                        {data.map((item, idx) => (
+                            <div key={idx} className="flex items-center text-sm group hover:bg-white/5 p-2 rounded">
+                                <div className="flex-1 flex justify-end gap-3">
+                                    <div className="text-right"><div className="text-gray-400 text-xs">{item.lowSector}</div><div className="text-xs text-zinc-500">{item.lowCount}</div></div>
+                                    <div className="w-[100px] flex justify-end"><div className="h-4 bg-zinc-700 rounded-l" style={{ width: (item.lowCount/maxVal)*100 + '%' }}></div></div>
+                                </div>
+                                <div className="w-[120px] text-center px-2"><span className="text-[10px] bg-black border border-zinc-700 px-2 py-1 rounded-full uppercase">{item.company}</span></div>
+                                <div className="flex-1 flex justify-start gap-3">
+                                    <div className="w-[100px] flex justify-start"><div className="h-4 bg-primary rounded-r" style={{ width: (item.topCount/maxVal)*100 + '%' }}></div></div>
+                                    <div className="text-left"><div className="text-white text-xs">{item.topSector}</div><div className="text-primary text-xs">{item.topCount}</div></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+             )
+        }
+
+        const RoleDonut = ({ company, data }) => {
+            const [idx, setIdx] = useState(0);
+            return (
+                 <div className="bg-card border border-gray-800 rounded-xl p-4 h-[250px]">
+                    <div className="flex justify-between items-center mb-2 border-b border-gray-800 pb-2">
+                        <h4 className="text-white font-bold text-xs">{company}</h4>
+                        <span className="text-primary text-[10px] border border-primary/20 px-2 rounded-full">{data.reduce((a,b) => a + b.count, 0)}</span>
+                    </div>
+                    <ResponsiveContainer width="100%" height="85%">
+                        <PieChart>
+                            <Pie activeIndex={idx} activeShape={renderActiveShape} data={data} cx="50%" cy="50%" innerRadius={50} outerRadius={70} dataKey="count" nameKey="role" onMouseEnter={(_, i) => setIdx(i)}>
+                                {data.map((e, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="none" />)}
+                            </Pie>
+                        </PieChart>
+                    </ResponsiveContainer>
+                 </div>
+            )
+        }
+
+        // --- MAIN APP ---
+
+        const ReportApp = () => {
+            const { hires, impact, internships, comparison, roles, mapImage } = window.REPORT_DATA;
+            
+            return (
+                <div className="max-w-7xl mx-auto p-6 space-y-8">
+                    <header className="flex justify-between items-center border-b border-gray-800 pb-4">
+                        <h1 className="text-2xl font-bold flex items-center gap-2">TALENT<span className="text-primary">LAB</span> REPORT</h1>
+                        <span className="text-xs text-gray-500">Gerado em: {new Date().toLocaleDateString()}</span>
+                    </header>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <SimpleBarChart data={hires} title="Contratados por Empresa" color="#E11457" />
+                        <SimpleBarChart data={internships} title="Vagas de Estágio" color="#06b6d4" />
+                        <InteractivePie data={impact} title="Ações Talent Lab" />
+                        
+                        {/* Static Map Image */}
+                        <div className="bg-card rounded-2xl p-6 border border-gray-800 shadow-xl h-[300px] flex flex-col">
+                             <h3 className="text-white mb-2 font-semibold text-sm border-l-4 border-primary pl-2">Demográfico</h3>
+                             <div className="flex-1 flex items-center justify-center overflow-hidden">
+                                {mapImage ? <img src={mapImage} className="max-w-full max-h-full object-contain" /> : <p className="text-gray-500 text-xs">Mapa não disponível</p>}
+                             </div>
+                        </div>
+                    </div>
+
+                    <ComparisonChart data={comparison} />
+
+                    <div>
+                        <h3 className="text-white mb-4 text-lg font-bold border-l-4 border-primary pl-2">Detalhamento por Empresa</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {roles.map((r, i) => (
+                                <RoleDonut key={i} company={r.company} data={r.data} />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ReportApp />);
+    </script>
+</body>
+</html>
+        `;
+
+        // 4. Download File
+        const blob = new Blob([htmlContent as string], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'TalentLab_Relatorio_Interativo.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+    } catch (error: any) {
+        console.error("HTML Export Error", error);
+        alert("Erro ao gerar relatório HTML");
+    } finally {
+        setIsExporting(false);
+        setIsOpen(false);
+        setProgress('');
+    }
+  };
+
 
   return (
     <div className="relative inline-block text-left">
@@ -297,6 +566,15 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
             >
               <Presentation className="mr-3 h-4 w-4 text-orange-500" />
               PowerPoint (GIF Animado)
+            </button>
+          </div>
+          <div className="py-1">
+             <button
+              onClick={handleExportHTML}
+              className="group flex items-center px-4 py-2 text-sm text-gray-200 hover:bg-zinc-700 w-full text-left"
+            >
+              <FileCode className="mr-3 h-4 w-4 text-blue-500" />
+              Relatório Interativo (HTML)
             </button>
           </div>
           <div className="py-1">
