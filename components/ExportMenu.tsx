@@ -153,7 +153,8 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
             numWorkers: 2
         }, (obj: any) => {
             if (!obj.error) {
-                resolve({ data: obj.image, width, height });
+                // Fix: explicit cast for obj.image from unknown/any to string
+                resolve({ data: obj.image as string, width, height });
             } else {
                 console.error("GIF generation error", obj.errorMsg);
                 // Fallback to static image if GIF fails
@@ -282,7 +283,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
         let mapImage = "";
         const mapElement = document.getElementById('chart-map');
         if (mapElement) {
-             const canvas = await html2canvas(mapElement, {
+             const canvas = await html2canvas(mapElement as HTMLElement, {
                 scale: 1.5,
                 backgroundColor: '#121212',
                 useCORS: true,
@@ -314,10 +315,13 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
       };
     </script>
 
-    <!-- React & Recharts Dependencies -->
+    <!-- React Dependencies -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+    <script crossorigin src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+    
+    <!-- Recharts Dependencies (PINNED VERSION TO PREVENT BLACK SCREEN) -->
+    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
     
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -328,6 +332,14 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
         ::-webkit-scrollbar-track { background: #1a1a1a; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
     </style>
+
+    <!-- Error Handler -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            document.body.innerHTML = '<div style="color:red; padding:20px; font-family:sans-serif;"><h1>Erro ao carregar relatório</h1><p>' + message + '</p><p>Linha: ' + lineno + '</p></div>';
+            console.error(error);
+        };
+    </script>
 </head>
 <body>
     <div id="root"></div>
@@ -345,7 +357,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
     </script>
 
     <!-- React Application -->
-    <script type="text/babel">
+    <script type="text/babel" data-presets="env,react">
         const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList, PieChart, Pie, Sector } = Recharts;
         const { useState } = React;
         const COLORS = ['#E11457', '#b31045', '#ff4d88', '#555555', '#333333'];

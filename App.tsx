@@ -34,7 +34,7 @@ const App: React.FC = () => {
             <Zap className="text-primary w-6 h-6" />
             <h1 className="text-xl font-bold tracking-wider flex items-center gap-2">
               TALENT<span className="text-primary">LAB</span> ANALYTICS
-              <span className="text-[10px] bg-white/10 text-gray-400 px-2 py-0.5 rounded-full border border-white/5 font-mono">v2.13</span>
+              <span className="text-[10px] bg-white/10 text-gray-400 px-2 py-0.5 rounded-full border border-white/5 font-mono">v2.15</span>
             </h1>
           </div>
           {data.length > 0 && (

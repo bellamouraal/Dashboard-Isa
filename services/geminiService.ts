@@ -7,22 +7,26 @@ export const generateSampleData = async (): Promise<StudentRecord[]> => {
     let apiKey = '';
     
     // 1. Try Vite standard (import.meta.env)
+    // We access import.meta safely
     try {
       // @ts-ignore
-      if (import.meta && import.meta.env && import.meta.env.VITE_API_KEY) {
+      if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
         // @ts-ignore
         apiKey = import.meta.env.VITE_API_KEY;
       }
     } catch (e) {
-      // Ignore error if import.meta is not available
+      // Ignore
     }
 
-    // 2. Fallback to process.env (Node.js/Test)
+    // 2. Fallback to process.env (Node.js/Test) ONLY if safe
     if (!apiKey) {
       try {
-        apiKey = process.env.API_KEY || '';
+        // Double check process existence to prevent "ReferenceError: process is not defined"
+        if (typeof process !== 'undefined' && process.env) {
+            apiKey = process.env.API_KEY || '';
+        }
       } catch (e) {
-        // Ignore ReferenceError if process is not defined in browser
+        // Ignore
       }
     }
 
