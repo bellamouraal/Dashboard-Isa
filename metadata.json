@@ -1,0 +1,5 @@
+{
+  "name": "Talent Lab Analytics",
+  "description": "An interactive, dark-themed dashboard to analyze the impact of Talent Lab on student hiring, featuring geolocation data and company metrics.",
+  "requestFramePermissions": []
+}
