@@ -180,7 +180,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
         background: { color: '000000' },
       });
 
-      const chartIds = [
+      const chartIds: { id: string; title: string }[] = [
         { id: 'chart-hires', title: 'Contratações por Empresa' },
         { id: 'chart-internships', title: 'Vagas de Estágio e Trainee' },
         { id: 'chart-impact', title: 'Impacto Talent Lab' },
@@ -207,7 +207,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
             const slide = pptx.addSlide({ masterName: 'MASTER_DARK' });
             
             // Title
-            slide.addText(item.title, {
+            slide.addText(String(item.title), {
               x: 0.5, y: 0.3, w: '90%', fontSize: 18, color: 'E11457', bold: true, fontFace: 'Arial'
             });
 
@@ -237,7 +237,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
 
             // Add GIF (Base64)
             slide.addImage({
-              data: result.data,
+              data: String(result.data),
               x: finalX,
               y: startY,
               w: finalW,
@@ -482,7 +482,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
                     </header>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <SimpleBarChart data={hires} title="Contratados por Empresa" color="#E11457" />
+                        <SimpleBarChart data={hires} title="Contratações por Empresa" color="#E11457" />
                         <SimpleBarChart data={internships} title="Vagas de Estágio" color="#06b6d4" />
                         <InteractivePie data={impact} title="Ações Talent Lab" />
                         
