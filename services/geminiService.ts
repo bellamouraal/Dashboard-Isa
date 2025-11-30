@@ -3,6 +3,7 @@ import { StudentRecord } from "../types";
 
 export const generateSampleData = async (): Promise<StudentRecord[]> => {
   try {
+    // The API key must be obtained exclusively from the environment variable process.env.API_KEY.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Prompt engineered to return a raw CSV string
