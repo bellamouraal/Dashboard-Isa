@@ -288,7 +288,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
                 backgroundColor: '#121212',
                 useCORS: true,
                 logging: false
-             });
+             } as any);
              mapImage = canvas.toDataURL('image/png');
         }
 
