@@ -208,7 +208,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
             const slide = pptx.addSlide({ masterName: 'MASTER_DARK' });
             
             // Title
-            slide.addText(String(item.title), {
+            slide.addText(item.title as string, {
               x: 0.5, y: 0.3, w: '90%', fontSize: 18, color: 'E11457', bold: true, fontFace: 'Arial'
             });
 

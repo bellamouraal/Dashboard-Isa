@@ -3,27 +3,12 @@ import { Upload, Zap, LayoutDashboard, Tag } from 'lucide-react';
 import FileUpload from './components/FileUpload';
 import Dashboard from './components/Dashboard';
 import { StudentRecord } from './types';
-import { generateSampleData } from './services/geminiService';
 
 const App: React.FC = () => {
   const [data, setData] = useState<StudentRecord[]>([]);
-  const [loading, setLoading] = useState(false);
 
   const handleDataLoaded = (loadedData: StudentRecord[]) => {
     setData(loadedData);
-  };
-
-  const handleGenerateSample = async () => {
-    setLoading(true);
-    try {
-      const sample = await generateSampleData();
-      setData(sample);
-    } catch (error) {
-      console.error("Failed to generate data", error);
-      alert("Failed to generate sample data using Gemini. Please check your API Key or try again.");
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -34,7 +19,7 @@ const App: React.FC = () => {
             <Zap className="text-primary w-6 h-6" />
             <h1 className="text-xl font-bold tracking-wider flex items-center gap-2">
               TALENT<span className="text-primary">LAB</span> ANALYTICS
-              <span className="text-[10px] bg-white/10 text-gray-400 px-2 py-0.5 rounded-full border border-white/5 font-mono">v2.21</span>
+              <span className="text-[10px] bg-white/10 text-gray-400 px-2 py-0.5 rounded-full border border-white/5 font-mono">v2.22</span>
             </h1>
           </div>
           {data.length > 0 && (
@@ -65,30 +50,6 @@ const App: React.FC = () => {
              
              <div className="w-full max-w-md space-y-4">
                <FileUpload onDataLoaded={handleDataLoaded} />
-               
-               <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-gray-800" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-black px-2 text-gray-500">Ou</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleGenerateSample}
-                  disabled={loading}
-                  className="w-full py-4 rounded-xl border border-primary/30 hover:bg-primary/5 text-primary transition-all duration-300 flex items-center justify-center gap-2 group"
-                >
-                  {loading ? (
-                    <span className="animate-pulse">Gerando dados com IA...</span>
-                  ) : (
-                    <>
-                      <Zap className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                      Gerar Dados de Exemplo (Gemini)
-                    </>
-                  )}
-                </button>
              </div>
           </div>
         ) : (
