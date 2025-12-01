@@ -153,8 +153,9 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
             numWorkers: 2
         }, (obj: any) => {
             if (!obj.error) {
-                // Fix: explicit cast for obj.image from unknown/any to string
-                resolve({ data: obj.image as string, width, height });
+                // Ensure data is treated as string
+                const imgData = typeof obj.image === 'string' ? obj.image : '';
+                resolve({ data: imgData, width, height });
             } else {
                 console.error("GIF generation error", obj.errorMsg);
                 // Fallback to static image if GIF fails
@@ -203,7 +204,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
         
         const result = await generateChartGif(item.id);
         
-        if (result) {
+        if (result && result.data) {
             const slide = pptx.addSlide({ masterName: 'MASTER_DARK' });
             
             // Title
@@ -517,7 +518,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ data }) => {
         `;
 
         // 4. Download File
-        const blob = new Blob([htmlContent as string], { type: 'text/html' });
+        const blob = new Blob([htmlContent], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
